@@ -1,2 +1,2 @@
-web gunicorn projectname.wsgi
+web gunicorn disha.wsgi:application --log-file -
 
