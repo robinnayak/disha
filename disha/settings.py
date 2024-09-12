@@ -16,7 +16,7 @@ import os
 from decouple import config
 from dj_database_url import parse as db_url
 
-print("data base url",config('DATABASE_URL'))
+# print("data base url",config('DATABASE_URL'))
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -32,10 +32,11 @@ SECRET_KEY = 'django-insecure-(-qye!0!cxr58=24)-v3y2$eenr%ple-7t8(nhj!%o18i)q&i3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '10.0.2.2', '127.0.0.1','disha.up.railway.app']
+# ALLOWED_HOSTS = ['localhost', '10.0.2.2', '127.0.0.1','disha.up.railway.app']
+ALLOWED_HOSTS = ['*']
 
 #updated for railway 
-CSRF_TRUSED_ORIGIN = ['https://disha.up.railway.app/']
+# CSRF_TRUSED_ORIGIN = ['https://disha.up.railway.app/']
 
 # Application definition
 
@@ -62,6 +63,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', #white noise
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -151,6 +153,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+STATICSTORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -185,6 +188,8 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')  # Be careful with storing sensitive data in your settings
 DEFAULT_FROM_EMAIL = f'Disha <{EMAIL_HOST_USER}>'
+
+
 
 #for smtp
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
