@@ -32,8 +32,10 @@ SECRET_KEY = 'django-insecure-(-qye!0!cxr58=24)-v3y2$eenr%ple-7t8(nhj!%o18i)q&i3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '10.0.2.2', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '10.0.2.2', '127.0.0.1','disha.up.railway.app']
 
+#updated for railway 
+CSRF_TRUSED_ORIGIN = ['https://disha.up.railway.app/']
 
 # Application definition
 
