@@ -36,7 +36,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 #updated for railway 
 # CSRF_TRUSED_ORIGIN = ['https://disha.up.railway.app/']
-CSRF_TRUSTED_ORIGINS = ["*"]
+CSRF_TRUSTED_ORIGINS = ["https://disha.up.railway.app/"]
 
 # Application definition
 
