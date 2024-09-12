@@ -1,0 +1,197 @@
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.models import Group
+from django.contrib.auth import login, logout, authenticate
+from authentication.models import CustomUser, Driver, Organization, Passenger
+from django.db.models import Q
+from authentication.serializers import CustomUserSerializer, CustomUserLoginSerializer, DriverSerializer, OrganizationSerializer, PassengerSerializer
+from authentication.tokens import get_tokens_for_user
+from .renderers import UserRenderer
+from django.shortcuts import get_object_or_404
+from django.db import transaction
+from functools import lru_cache
+from authentication.emailverification import send_verification_email
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode
+
+# Cache frequently accessed data using LRU caching
+@lru_cache(maxsize=100)
+def get_cached_user(username):
+    """Helper function to cache user data to reduce database load."""
+    return CustomUser.objects.select_related('profile', 'driver_profile', 'location').filter(username=username).first()
+
+def get_profile_by_role(user):
+    """Helper function to retrieve user profile based on their role."""
+    if user.is_organization:
+        return get_object_or_404(Organization, user=user)
+    elif user.is_driver:
+        return get_object_or_404(Driver, user=user)
+    elif user.is_passenger:
+        return get_object_or_404(Passenger, user=user)
+    return None
+
+def get_serializer_by_profile(profile, *args, **kwargs):
+    """Helper function to get the appropriate serializer for the profile."""
+    profile_serializer_map = {
+        Organization: OrganizationSerializer,
+        Driver: DriverSerializer,
+        Passenger: PassengerSerializer
+    }
+    return profile_serializer_map[type(profile)](profile, *args, **kwargs)
+
+
+class RegistrationView(APIView):
+    renderer_classes = [UserRenderer]
+
+    def get(self, request):
+        try:
+            users = CustomUser.objects.only('id', 'username', 'email')
+            serializer = CustomUserSerializer(users, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @transaction.atomic
+    def post(self, request):
+        data = request.data
+        is_driver = data.get('is_driver', False)
+        license_number = data.get('license_number', None)
+
+        if is_driver and not license_number:
+            return Response({"error": "License field is required for driver registration"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if is_driver and Driver.objects.filter(license_number=license_number).exists():
+            return Response({"error": "Driver with this license number already exists"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = CustomUserSerializer(data=data)
+        
+        if serializer.is_valid():
+            try:
+                with transaction.atomic():
+                    user = serializer.save()
+
+                    if user.is_organization:
+                        self._assign_group(user, 'organization')
+                        organization = Organization.objects.create(user=user)
+                        token = self._generate_token_for_user(user) if organization else None
+                    elif user.is_driver:
+                        self._assign_group(user, 'driver')
+                        driver = Driver.objects.create(user=user, license_number=license_number)
+                        token = self._generate_token_for_user(user) if driver else None
+                    else:
+                        self._assign_group(user, 'passenger')
+                        passenger = Passenger.objects.create(user=user)
+                        token = self._generate_token_for_user(user) if passenger else None
+                    send_verification_email(user,request)
+                return Response({
+                    'message': 'User created successfully',
+                    'user': serializer.data,
+                    'token': token
+                }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def _assign_group(self, user, group_name):
+        """Assign the user to a specified group."""
+        group = get_object_or_404(Group, name=group_name)
+        user.groups.add(group)
+
+    def _generate_token_for_user(self, user):
+        """Generate JWT token for the given user."""
+        return get_tokens_for_user(user)
+
+class VerifyEmailView(APIView):
+
+    def get(self, request, uidb64, token):
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = get_object_or_404(CustomUser, pk=uid)
+
+            if default_token_generator.check_token(user, token):
+                user.is_email_verified = True
+                user.save()
+                return Response({'message': 'Email verified successfully.'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'Invalid verification link or link has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class LoginView(APIView):
+    @transaction.atomic
+    def post(self, request):
+        serializer = CustomUserLoginSerializer(data=request.data)
+        if serializer.is_valid():
+            username = serializer.validated_data['username']
+            password = serializer.validated_data['password']
+
+            # Using the cached user retrieval function
+            user = get_cached_user(username)
+            if user and user.check_password(password):
+                login(request, user)
+                token = get_tokens_for_user(user)
+                return Response({
+                    'message': 'User logged in successfully',
+                    'user': CustomUserSerializer(user).data,
+                    'token': token
+                }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user = request.user
+            logout(request)
+            return Response({
+                'message': 'User logged out successfully',
+                'user': user.username
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProfileAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+
+    def get(self, request):
+        user = request.user
+        profile = get_profile_by_role(user)
+        if not profile:
+            return Response({"error": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = get_serializer_by_profile(profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @transaction.atomic
+    def put(self, request):
+        user = request.user
+        profile = get_profile_by_role(user)
+        if not profile:
+            return Response({"error": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = get_serializer_by_profile(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request):
+        user = request.user
+        # profile = get_profile_by_role(user)
+        if not user:
+            return Response({"error": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        with transaction.atomic():
+            # Delete the profile first
+            # Delete the associated CustomUser instance
+            user.delete()
+        return Response({"message": f"Profile of {user.username} deleted successfully."}, status=status.HTTP_204_NO_CONTENT)

@@ -1,0 +1,17 @@
+# Ignore environment variables
+.env
+
+# Ignore database configuration
+config/database.yml
+
+# Ignore personal information files
+personal_info.txt
+
+# Ignore all log files
+*.log
+
+# Ignore node_modules directory
+node_modules/
+
+# Ignore SQLite database
+db.sqlite3

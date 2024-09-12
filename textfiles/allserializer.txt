@@ -1,0 +1,475 @@
+authentication/serializers.py
+
+from rest_framework import serializers
+from django.contrib.auth.hashers import check_password
+from .models import CustomUser, Profile, Location
+import random
+import string
+
+# Profile Serializer
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['phone_number', 'profile_image', 'address']
+
+# CustomUser Serializer
+class CustomUserSerializer(serializers.ModelSerializer):
+    password2 = serializers.CharField(style={'input_type': 'password'}, write_only=True)
+    profile = ProfileSerializer()
+
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'password', 'password2', 'email', 'profile', 'is_organization', 'is_driver']
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def validate(self, data):
+        if 'profile' in data:
+            phone_number = data['profile'].get('phone_number')
+            if phone_number and len(phone_number) != 10:
+                raise serializers.ValidationError("Phone number must be 10 digits")
+        
+        if CustomUser.objects.filter(username=data['username']).exists():
+            raise serializers.ValidationError("Username already exists")
+        
+        if data['password'] != data['password2']:
+            raise serializers.ValidationError("Passwords must match")
+        
+        return data
+
+    def create(self, validated_data):
+        profile_data = validated_data.pop('profile')
+        validated_data.pop('password2')
+        user = CustomUser.objects.create_user(**validated_data)
+        Profile.objects.create(user=user, **profile_data)
+        return user
+
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop('profile', {})
+        instance = super().update(instance, validated_data)
+        if profile_data:
+            Profile.objects.update_or_create(user=instance, defaults=profile_data)
+        return instance
+
+# CustomUser Login Serializer
+class CustomUserLoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField()
+
+    def validate(self, data):
+        user = CustomUser.objects.filter(username=data['username']).first()
+        if not user or not user.check_password(data['password']):
+            raise serializers.ValidationError("Invalid username or password")
+        return data
+
+# Location Serializer
+class LocationSerializer(serializers.ModelSerializer):
+    user = CustomUserSerializer(read_only=True)
+
+    class Meta:
+        model = Location
+        fields = '__all__'
+
+    def create(self, validated_data):
+        username = self.context['username']
+        user = CustomUser.objects.get(username=username)
+        location, created = Location.objects.update_or_create(
+            user=user,
+            defaults=validated_data
+        )
+        return location
+
+organization/serializers
+
+from rest_framework import serializers
+from django.contrib.auth.hashers import check_password
+from authentication.models import CustomUser
+from authentication.serializers import CustomUserSerializer
+from .models import Organization,Trip,TripPrice,Review,Seat,Vehicle
+import random
+import string
+from django.utils import timezone
+
+from driver.serializers import DriverSerializer
+from driver.models import Driver
+# Organization Serializer
+class OrganizationSerializer(serializers.ModelSerializer):
+    user = CustomUserSerializer(read_only=True)
+
+    class Meta:
+        model = Organization
+        fields = '__all__'
+
+# Vehicle Serializer
+class VehicleSerializer(serializers.ModelSerializer):
+    organization = OrganizationSerializer(read_only=True)
+    driver = DriverSerializer(read_only=True)
+
+    class Meta:
+        model = Vehicle
+        fields = '__all__'
+
+    def create(self, validated_data):
+        org_email = self.context.get('org_email')
+        dri_license = self.context.get('dri_license')
+        check_driver = self.context.get('check_driver')
+
+        validated_data = self._assign_organization_and_driver(validated_data, org_email, dri_license, check_driver)
+        veh_id = self._generate_random_string()
+        reg_id = self._generate_registration_number(veh_id, validated_data['organization'].user.username)
+        validated_data['registration_number'] = reg_id
+
+        vehicle = Vehicle.objects.create(**validated_data)
+        return vehicle
+
+    def update(self, instance, validated_data):
+        validated_data.pop('registration_number', None)
+        validated_data.pop('license_plate_number', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+    def _assign_organization_and_driver(self, validated_data, org_email, dri_license, check_driver):
+        if check_driver and dri_license:
+            driver_license = Driver.objects.get(license_number=dri_license)
+            validated_data['driver'] = driver_license
+        else:
+            validated_data['driver'] = None
+
+        org_mail = Organization.objects.get(user__email=org_email)
+        validated_data['organization'] = org_mail
+
+        return validated_data
+
+    @staticmethod
+    def _generate_random_string(length=10):
+        return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+
+    @staticmethod
+    def _generate_registration_number(id, username):
+        return f"{id}{username}".upper()
+
+# Trip Serializer
+class TripSerializer(serializers.ModelSerializer):
+    organization = OrganizationSerializer(read_only=True)
+
+    class Meta:
+        model = Trip
+        fields = '__all__'
+
+    def create(self, validated_data):
+        org_email = self.context.get('org_email')
+        org_mail = Organization.objects.get(user__email=org_email)
+        validated_data['organization'] = org_mail
+        trip = Trip.objects.create(**validated_data)
+        return trip
+
+# TripPrice Serializer
+class TripPriceSerializer(serializers.ModelSerializer):
+    trip = TripSerializer(read_only=True)
+    vehicle = VehicleSerializer(read_only=True)
+
+    class Meta:
+        model = TripPrice
+        fields = '__all__'
+
+    def create(self, validated_data):
+        trip_id = self.context.get('trip_id')
+        vehicle_registration_number = self.context.get('vehicle_registration_number')
+        org_email = self.context.get('org_email')
+
+        trip = Trip.objects.get(id=trip_id, organization__user__email=org_email)
+        vehicle = Vehicle.objects.get(registration_number=vehicle_registration_number)
+        validated_data['trip'] = trip
+        validated_data['vehicle'] = vehicle
+
+        trip_price = TripPrice.objects.create(**validated_data)
+        return trip_price
+    
+class ReviewSerializer(serializers.ModelSerializer):
+    reviewer = CustomUserSerializer(read_only=True)
+    reviewee = CustomUserSerializer(read_only=True)
+
+    class Meta:
+        model = Review
+        fields = '__all__'
+
+    def validate(self, data):
+        # Ensure that reviewer and reviewee are not the same
+        if data['reviewer'] == data['reviewee']:
+            raise serializers.ValidationError("Reviewer and reviewee cannot be the same.")
+        return data
+
+    def create(self, validated_data):
+        # Add custom logic here if needed, for example, setting default values
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        # Add custom logic here if needed, for example, updating timestamps
+        return super().update(instance, validated_data)
+    
+    
+class SeatSerializer(serializers.ModelSerializer):
+    vehicle = VehicleSerializer(read_only=True)
+
+    class Meta:
+        model = Seat
+        fields = '__all__'
+
+    def create(self, validated_data):
+        # Generate a unique seat number
+        vehicle = validated_data.get('vehicle')
+        existing_seat_numbers = vehicle.seats.values_list('seat_number', flat=True)
+        seat_number = self.generate_unique_seat_number(vehicle, existing_seat_numbers)
+        validated_data['seat_number'] = seat_number
+        return super().create(validated_data)
+
+    def generate_unique_seat_number(self, vehicle, existing_seat_numbers):
+        for seat_number in range(1, vehicle.seating_capacity + 1):
+            formatted_seat_number = f"S{seat_number:03d}"
+            if formatted_seat_number not in existing_seat_numbers:
+                return formatted_seat_number
+        raise ValueError("Unable to generate unique seat number")
+
+    def update(self, instance, validated_data):
+        # Retrieve the seat number and occupancy status from validated_data
+        seat_number = validated_data.get('seat_number', instance.seat_number)
+        is_occupied = validated_data.get('is_occupied', instance.is_occupied)
+
+        # Update the seat attributes
+        if seat_number != instance.seat_number:
+            instance.seat_number = seat_number
+        
+        if is_occupied != instance.is_occupied:
+            instance.is_occupied = is_occupied
+
+        # Save the updated seat instance
+        instance.save()
+
+        # Update the vehicle availability
+        vehicle = instance.vehicle
+        if vehicle:
+            # Adjust the available seat count based on occupancy change
+            if is_occupied:
+                vehicle.available_seat -= 1
+            else:
+                vehicle.available_seat += 1
+
+            # Ensure the available seats do not exceed the seating capacity
+            vehicle.available_seat = min(vehicle.available_seat, vehicle.seating_capacity)
+            vehicle.save()
+
+        return instance
+
+    def reset_all_seats(self):
+        """
+        Resets all seats to unoccupied status at the end of the day.
+        """
+        today = timezone.now().date()
+        vehicles = Vehicle.objects.all()  # You may filter vehicles based on specific criteria if needed
+
+        for vehicle in vehicles:
+            # Get all seats for the vehicle
+            seats = vehicle.seats.all()
+
+            # Reset each seat to not occupied
+            for seat in seats:
+                seat.is_occupied = False
+                seat.save()
+
+            # Update vehicle available seats count
+            vehicle.available_seat = vehicle.seating_capacity
+            vehicle.save()
+
+driver/serializers
+from rest_framework import serializers
+from django.contrib.auth.hashers import check_password
+from authentication.models import CustomUser
+from authentication.serializers import CustomUserSerializer
+from .models import Driver,PushAlertNotification
+from organization.models import Organization,Trip
+from organization.serializers import OrganizationSerializer,TripSerializer
+import random
+import string
+
+# Driver Serializer
+class DriverSerializer(serializers.ModelSerializer):
+    user = CustomUserSerializer(read_only=True)
+    organization = OrganizationSerializer(read_only=True)
+
+    class Meta:
+        model = Driver
+        fields = '__all__'
+
+    def update(self, instance, validated_data):
+        check_organization = self.context.get('check_organization')
+        org_email = self.context.get('org_email')
+        if check_organization and org_email:
+            organization = Organization.objects.get(user__email=org_email)
+            instance.organization = organization
+        return super().update(instance, validated_data)
+
+# Push Alert Notification Serializer
+class PushAlertNotificationSerializer(serializers.ModelSerializer):
+    user = CustomUserSerializer(read_only=True)
+    driver = DriverSerializer(read_only=True)
+    trip = TripSerializer(read_only=True)
+
+    class Meta:
+        model = PushAlertNotification
+        fields = '__all__'
+
+    def create(self, validated_data):
+        user_email = self.context['user']
+        driver_id = self.context['driver']
+        trip_id = self.context['trip']
+
+        user = CustomUser.objects.get(email=user_email)
+        driver = Driver.objects.get(id=driver_id)
+        trip = Trip.objects.get(id=trip_id)
+
+        notification, created = PushAlertNotification.objects.update_or_create(
+            user=user,
+            driver=driver,
+            trip=trip,
+            defaults=validated_data
+        )
+        return notification
+
+passenger/serializers
+from rest_framework import serializers
+from django.contrib.auth.hashers import check_password
+from authentication.models import CustomUser
+from authentication.serializers import CustomUserSerializer
+from driver.models import Driver,PushAlertNotification
+from organization.models import Organization,Trip
+from organization.serializers import OrganizationSerializer,TripSerializer
+from django.utils import timezone
+import random
+import string
+from passenger.models import Passenger,Payment
+
+class PassengerSerializer(serializers.ModelSerializer):
+    user = CustomUserSerializer(read_only=True)
+    class Meta:
+        model = Passenger
+        fields = '__all__'
+
+    def validate_loyalty_points(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Loyalty points cannot be negative.")
+        return value
+
+    def create(self, validated_data):
+        user_data = validated_data.pop('user', None)
+        user = self.context.get('user')
+        if user:
+            validated_data['user'] = user
+
+        passenger = Passenger.objects.create(**validated_data)
+        return passenger
+
+    def update(self, instance, validated_data):
+        loyalty_points = validated_data.get('loyalty_points', instance.loyalty_points)
+        if loyalty_points < 0 or ('redeem_points' in self.initial_data and loyalty_points > instance.loyalty_points):
+            raise serializers.ValidationError("Invalid loyalty points operation.")
+        
+        for attr, value in validated_data.items:
+            setattr(instance, attr, value)
+        
+        instance.save()
+        return instance
+
+class PaymentSerializer(serializers.ModelSerializer):
+    passenger = PassengerSerializer(read_only=True)
+    trip = TripSerializer(read_only=True)
+
+    class Meta:
+        model = Payment
+        fields = '__all__'
+
+    def validate(self, data):
+        # Ensure amount_paid is positive and check if payment method is valid
+        if data['amount_paid'] <= 0:
+            raise serializers.ValidationError("Amount paid must be greater than zero.")
+        if data['payment_method'] not in dict(Payment.PAYMENT_METHOD_CHOICES).keys():
+            raise serializers.ValidationError("Invalid payment method.")
+        return data
+
+    def create(self, validated_data):
+        # Add custom logic here, such as generating a transaction ID
+        if not validated_data.get('transaction_id'):
+            validated_data['transaction_id'] = f"{validated_data['passenger'].user.username}_{validated_data['trip'].trip_id}_{timezone.now().strftime('%Y%m%d%H%M%S')}"
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        # Add custom logic here, such as logging updates or handling specific fields
+        return super().update(instance, validated_data)
+
+booking/serializers
+
+from rest_framework import serializers
+from django.contrib.auth.hashers import check_password
+from authentication.models import CustomUser
+from authentication.serializers import CustomUserSerializer
+from driver.models import Driver,PushAlertNotification
+from organization.models import Organization,Trip,TripPrice
+from organization.serializers import OrganizationSerializer,TripSerializer,TripPriceSerializer
+from django.utils import timezone
+import random
+import string
+from passenger.models import Passenger,Payment
+from passenger.serializers import PassengerSerializer
+
+
+from .models import Booking,Ticket
+class BookingSerializer(serializers.ModelSerializer):
+    passenger = PassengerSerializer(read_only=True)
+    tripprice = TripPriceSerializer(read_only=True)
+
+    class Meta:
+        model = Booking
+        fields = '__all__'
+
+    def create(self, validated_data):
+        passenger_email = self.context.get('passenger_email')
+        trip_price_id = self.context.get('trip_price_id')
+
+        try:
+            passenger = Passenger.objects.get(user__email=passenger_email)
+            validated_data['passenger'] = passenger
+        except Passenger.DoesNotExist:
+            raise serializers.ValidationError({"message": "Passenger not found"})
+
+        try:
+            trip_price = TripPrice.objects.get(id=trip_price_id)
+            validated_data['tripprice'] = trip_price
+        except TripPrice.DoesNotExist:
+            raise serializers.ValidationError({"message": "Trip Price not found"})
+
+        booking = Booking.objects.create(**validated_data)
+        return booking
+
+    def update(self, instance, validated_data):
+        instance.status = validated_data.get('status', instance.status)
+        instance.save()
+        return instance
+
+
+class TicketSerializer(serializers.ModelSerializer):
+    booking = BookingSerializer(read_only=True)
+
+    class Meta:
+        model = Ticket
+        fields = '__all__'
+
+    def create(self, validated_data):
+        booking_id = self.context.get('booking_id')
+        try:
+            booking = Booking.objects.get(id=booking_id)
+            validated_data['booking'] = booking
+        except Booking.DoesNotExist:
+            raise serializers.ValidationError({"message": "Booking not found"})
+
+        ticket = Ticket.objects.create(**validated_data)
+        return ticket

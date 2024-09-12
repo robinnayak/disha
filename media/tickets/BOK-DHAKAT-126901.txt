@@ -1,0 +1,18 @@
+
+        -------------------------------------
+        Organization: Greentech
+        Booking ID: BOK-DHAKAT-126901
+        Booking Date and Time: 2024-08-27 11:56:40
+        Passenger: Arun
+        Trip: Dharan to kathmandu
+        No. of Passengers: 2
+        Seats: S003, S004
+        Price per Person: 1500.00
+        Total Price: 3000.00
+        Trip Date: 2024-08-27 14:14:28
+        Ticket Booked Time: 2024-08-27 11:56:54
+        Driver: ray
+        Vehicle: Ford Corolla silver, Plate: KX-01-1234
+        Status: Confirmed, Paid
+        -------------------------------------
+        

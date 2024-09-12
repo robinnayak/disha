@@ -1,0 +1,163 @@
+http://localhost:8000/auth/register/
+{
+  "username": "ray",
+  "email": "ray@email.com",
+  "password": "ray@123456",
+  "password2": "ray@123456",
+  "license_number": "XBZ123ASD0",
+  "is_organization": false,
+  "is_driver": true,
+  "is_passenger": false
+}
+
+http://localhost:8000/auth/login/
+{
+  "username":"Arun",
+  "password":"Arun@123456"
+}
+
+http://localhost:8000/auth/logout/
+
+http://localhost:8000/organization/vehicles/
+{
+  "license_number":"XBZ123ASD0",
+  "registration_number": "KA-1234",
+  "vehicle_type": "jeep",
+  "company_made": "Ford",
+  "model": "Corolla",
+  "color": "silver",
+  "seating_capacity": 5,
+  "license_plate_number": "KX-01-1234",
+  "insurance_expiry_date": "2025-12-31",
+  "fitness_certificate_expiry_date": "2025-06-30",
+  "image": null,
+  "available_seat": 0
+}
+
+http://localhost:8000/organization/vehicles/VEH-GR-1262/
+
+{
+  "registration_number": "KA-1234",
+  "license_number":"XBZ123ASD0",
+  "vehicle_type": "jeep",
+  "company_made": "Toyota",
+  "model": "Corolla",
+  "color": "black",
+  "seating_capacity": 5,
+  "insurance_expiry_date": "2025-12-31",
+  "fitness_certificate_expiry_date": "2025-06-30",
+  "image": null,
+  "available_seat": 5
+}
+
+http://localhost:8000/api/reviews/create/
+{
+  "rating": 4,
+  "comment": "The service was excellent.",
+  "reviewee_content_type": "driver",
+  "reviewee_object_id": 3
+}
+
+http://localhost:8000/organization/trips/
+{
+  "registration_number": "VEH-GR-1262",
+  "price": 1500,
+  "from_location": "Dharan",
+  "to_location": "kathmandu",
+  "is_reverese_trip": false,
+  "duration": null,
+  "distance": 22.1,
+  "start_datetime": "2024-08-27T19:59:28+05:45",
+  "end_datetime": "2024-08-27T19:59:30+05:45"
+}
+
+http://localhost:8000/organization/trips/JANKAT20240826124959/
+
+{
+  "registration_number": "VEH-GR-7469",
+  "price": 1500,
+  "from_location": "Janakpur",
+  "to_location": "kathmandu",
+  "is_reverese_trip": false,
+  "duration": null,
+  "distance": 30,
+  "start_datetime": "2024-08-24T19:59:28+05:45",
+  "end_datetime": "2024-08-24T19:59:30+05:45"
+}
+
+http://localhost:8000/api/review/
+{
+  "rating": 4,
+  "comment": "The driver was punctual and professional.",
+  "reviewee_content_type": "driver",
+  "reviewee_object_id": 3
+}
+
+http://localhost:8000/api/reviews/
+
+http://localhost:8000/organization/trip-reset/
+{
+  "trip_id": "JANKAT20240824153147",
+  "start_datetime": "2024-08-26T08:00:00+05:45"
+}
+
+http://localhost:8000/booking/create/
+{
+  "trip_id": "JANKAT20240824153147",
+  "seats": [
+    {
+      "seat_number": "S005"
+    },
+    {
+      "seat_number": "S004"
+    }
+  ],
+  "is_confirmed": true
+}
+
+http://localhost:8000/booking/filter/
+// Here should be a function that allows a passenger to change their seat if it is not already booked.
+// If the seat is available, the function should set the "is_occupied" property of that seat to false.
+// The function should make a request to the following endpoint:
+
+http://localhost:8000/booking/detail/BOK-JANKAT-285445/
+{
+  "is_paid": true,
+  "seats": [
+    {
+      "seat_number": "S003"
+    },
+    {
+      "seat_number": "S004"
+    }
+  ]
+}
+
+http://localhost:8000/booking/daily-earnings/create/
+{
+  "trip_id": "DHAKAT20240827111821"
+}
+
+http://localhost:8000/api/ticket/filter/
+
+http://localhost:8000/api/ticket/detail/ARUN_2_JANKAT20240824153147_20240825141544/
+
+http://localhost:8000/passenger/payment/
+
+{
+  "booking_id": "BOK-JANKAT-491263",
+  "payment_method": "mobile_wallet"
+}
+
+http://localhost:8000/passenger/user-payment/
+
+
+http://localhost:8000/api/profile/
+
+{
+  "phone_number": "9825827690",
+  "profile_image": null,
+  "address": "Bhaktapur,Nepal",
+  "emergency_contact_name": "sita",
+  "emergency_contact_number":9825467890
+}

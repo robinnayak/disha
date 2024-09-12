@@ -1,0 +1,569 @@
+# authentication/models.py
+
+from django.contrib.auth.models import BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.db import models
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, username, email, password=None, **extra_fields):
+        if not username:
+            raise ValueError("The Username must be set")
+        if not email:
+            raise ValueError("The Email must be set")
+        
+        email = self.normalize_email(email)
+        user = self.model(username=username, email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, username, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self.create_user(username, email, password, **extra_fields)
+
+    def get_by_natural_key(self, username):
+        return self.get(username=username)
+
+class CustomUser(AbstractBaseUser, PermissionsMixin):
+    username = models.CharField(max_length=150, unique=True)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=128)
+
+    is_organization = models.BooleanField(default=False)
+    is_driver = models.BooleanField(default=False)
+    is_passenger = models.BooleanField(default=False)
+    is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    objects = CustomUserManager()
+
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['email', 'password']
+
+    def __str__(self):
+        return self.username
+
+class Profile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
+    phone_number = models.CharField(max_length=15, blank=True)
+    profile_image = models.ImageField(upload_to='profile_images',blank=True,null=True)
+    address = models.CharField(max_length=255,blank=True)
+    date_of_birth = models.DateField(blank=True,null=True)
+
+    
+    def __str__(self) -> str:
+        return f"{self.user.username} - profile"
+    
+class Location(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete= models.CASCADE, related_name='location')
+    latitude = models.DecimalField(max_digits=9,decimal_places=6)
+    longitude = models.DecimalField(max_digits=9,decimal_places=6)
+    heading = models.DecimalField(max_digits=5,decimal_places=1,blank=True,null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self) -> str:
+        return f"Location of {self.user.username} as {self.timestamp}"
+    
+# organization/models.py
+
+from django.db import models
+from authentication.models import CustomUser,Profile
+
+# from driver.models import Driver
+from passenger.models import Passenger
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
+from rest_framework import serializers
+from django.utils import timezone
+
+import random
+import string
+# Create your models here.
+
+class Organization(Profile):
+    # user
+    # phone_number
+    # profile_image
+    # address
+    # date_of_birth
+    name = models.CharField(max_length=150,blank=True,null=True)
+    registration_number = models.CharField(max_length=150, unique=True,blank=True,null=True)
+    description = models.TextField(blank=True,null=True)
+    logo = models.ImageField(upload_to='organization_logos',blank=True,null=True)
+    total_earnings = models.DecimalField(max_digits=10,decimal_places=2,default=0.0)
+    remaining_earnings = models.DecimalField(max_digits=10,decimal_places=2,default=0.00)
+    date_created = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self) -> str:
+        return self.user.username
+    
+    def get_total_reviews(self):
+        return self.organization_reviews.count()
+    
+    def update_earnings(self,amount):
+        self.total_earnings += amount
+        self.remaining_earnings += amount   
+        self.save()
+    def withdraw_earnings(self,amount):
+        if amount <=self.remaining_earnings:
+            self.remaining_earnings -= amount
+            self.save()
+            return True
+        else:
+            raise ValueError('Insufficient funds to withdraw')
+    
+    def _generate_registration_number(self):
+        """Generate a unique registration number."""
+        length = 10
+        while True:
+            reg_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+            if not Organization.objects.filter(registration_number=reg_number).exists():
+                return reg_number
+
+    def save(self, *args, **kwargs):
+        if not self.registration_number:
+            self.registration_number = self._generate_registration_number()
+        super().save(*args, **kwargs)
+    
+# Review Model
+class Review(models.Model):
+    choices = [
+        (1, '1 Star'),
+        (2, '2 Star'),
+        (3, '3 Star'),
+        (4, '4 Star'),
+        (5, '5 Star'),
+    ]
+    rating = models.IntegerField(choices=choices, help_text="Rating out of 5")
+    comment = models.TextField(blank=True, null=True, help_text="Optional comment for the review")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    reviewer_content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, related_name='reviewer_reviews')
+    reviewer_object_id = models.PositiveIntegerField()
+    reviewer = GenericForeignKey('reviewer_content_type', 'reviewer_object_id')
+
+    reviewee_content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, related_name='reviewee_reviews')
+    reviewee_object_id = models.PositiveIntegerField()
+    reviewee = GenericForeignKey('reviewee_content_type', 'reviewee_object_id')
+
+    def __str__(self):
+        reviewer_name = getattr(self.reviewer, 'username', 'unknown')
+        reviewee_name = getattr(self.reviewee, 'username', 'unknown')
+        return f"Review by {reviewer_name} for {reviewee_name} - {self.rating} Stars"
+
+
+# Vehicle Model
+class Vehicle(models.Model):
+    VEHICLE_TYPE_CHOICES = (
+        ('jeep', 'Jeep'),
+        ('hilux', 'Hilux'),
+        ('bike', 'Bike'),
+        ('bus', 'Bus'),
+        ('truck', 'Truck'),
+    )
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, blank=True, related_query_name="vehicle_organization")
+    driver = models.ForeignKey('driver.Driver', on_delete=models.CASCADE, blank=True, related_query_name="vehicle_driver")
+    registration_number = models.CharField(max_length=20, unique=True)  # unique=True implies db_index=True
+    vehicle_type = models.CharField(max_length=10, choices=VEHICLE_TYPE_CHOICES, db_index=True)  # Added index
+    company_made = models.CharField(max_length=50, blank=True)
+    model = models.CharField(max_length=50, blank=True)
+    color = models.CharField(max_length=30, default="black")
+    seating_capacity = models.PositiveIntegerField(default=0)
+    license_plate_number = models.CharField(max_length=10, unique=True)  # unique=True implies db_index=True
+    insurance_expiry_date = models.DateField()
+    fitness_certificate_expiry_date = models.DateField()
+    image = models.ImageField(upload_to='vehicle_images', blank=True)
+    available_seat = models.PositiveIntegerField(default=0)
+
+    def save(self, *args, **kwargs):
+        if self.available_seat == 0:
+            self.available_seat = self.seating_capacity
+        elif self.available_seat < 0:
+            raise serializers.ValidationError("Available seats cannot be less than zero.")
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.registration_number} - {self.company_made} {self.model}"
+
+# Seat Model
+class Seat(models.Model):
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='seats')
+    seat_number = models.CharField(max_length=5)
+    is_occupied = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Seat {self.seat_number} in {self.vehicle.registration_number}"
+
+class Trip(models.Model):
+    trip_id = models.CharField(max_length=100, unique=True, editable=False)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE,related_name='trips')
+    from_location = models.CharField(max_length=100, db_index=True)
+    to_location = models.CharField(max_length=100,db_index=True)
+    duration = models.DurationField(blank=True, null=True)
+    distance = models.FloatField(help_text="Distance in kilometers", blank=True, null=True)
+    start_datetime = models.DateTimeField()
+    end_datetime = models.DateTimeField()
+
+    def save(self, *args, **kwargs):
+        if not self.trip_id:
+            self.trip_id = self.generate_trip_id()
+
+        if not self.duration and self.distance:
+            self.duration = self.calculate_duration_based_on_distance()
+
+        # Reset available seats if the trip is scheduled for the next day
+        if self.start_datetime.date() != timezone.now().date():
+            self.reset_vehicle_seats()
+
+        super().save(*args, **kwargs)
+
+    def generate_trip_id(self):
+        prefix = f"{self.from_location[:3]}{self.to_location[:3]}"
+        timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
+        return f"{prefix}{timestamp}".upper()
+
+    def calculate_duration_based_on_distance(self):
+        # Assuming an average speed of 60 km/h
+        return timezone.timedelta(hours=self.distance / 60)
+
+    def reset_vehicle_seats(self):
+        """
+        Resets the available seats of the vehicle associated with this trip.
+        """
+        vehicle = self.vehicle
+
+        if not vehicle:
+            raise ValueError("Vehicle associated with the trip is not defined.")
+
+        # Reset the available seat count to the vehicle's seating capacity
+        vehicle.available_seat = vehicle.seating_capacity
+        
+        # Optionally reset seat occupancy if necessary
+        # Uncomment if seats need to be reset to unoccupied status
+        # for seat in vehicle.seats.all():
+        #     seat.is_occupied = False
+        #     seat.save()
+        
+        vehicle.save()
+
+        # Optionally log or return status
+        # print(f"Seats reset for vehicle {vehicle.registration_number}. Available seats: {vehicle.available_seat}")
+        
+
+    def calculate_earnings(self):
+        confirmed_bookings = self.booking_set.filter(is_confirmed=True)
+        total_earnings = sum([booking.price for booking in confirmed_bookings])
+        organization_share = total_earnings * 0.7
+        driver_share = total_earnings * 0.3
+        self.organization.update_earnings(organization_share)
+        self.vehicle.driver.update_earnings(driver_share)
+        return total_earnings
+
+    def __str__(self):
+        return f"{self.trip_id} - {self.start_datetime}"
+
+class TripPrice(models.Model):
+    trip = models.OneToOneField(Trip, on_delete=models.CASCADE, related_name='price')
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"Trip from {self.trip.from_location} to {self.trip.to_location} - Price: {self.price}"
+
+# driver/models.py
+from django.db import models
+from authentication.models import CustomUser
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.db import transaction
+from django.core.exceptions import ValidationError
+class Driver(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='driver_profile')
+    phone_number = models.CharField(max_length=15, blank=True)
+    profile_image = models.ImageField(upload_to='profile_images',blank=True,null=True)
+    address = models.CharField(max_length=255,blank=True)
+    date_of_birth = models.DateField(blank=True,null=True)
+    organization = models.ForeignKey('organization.Organization', on_delete=models.CASCADE, blank=True, null=True, related_name='drivers')
+    license_number = models.CharField(max_length=20, blank=True, unique=True)
+    experience = models.IntegerField(default=1)
+    availability_status = models.BooleanField(default=True)
+    total_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    remaining_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    def __str__(self):
+        return self.user.username
+
+    def update_earnings(self, amount):
+        """Update total and remaining earnings for the driver."""
+        self.total_earnings += amount
+        self.remaining_earnings += amount
+        self.save()
+
+    def withdraw_earnings(self, amount):
+        if amount > self.remaining_earnings:
+            raise ValidationError("Insufficient earnings to withdraw the requested amount.")
+        
+        try:
+            with transaction.atomic():
+                self.remaining_earnings -= amount
+                self.save()
+                # Log the withdrawal or trigger other related actions.
+        except Exception as e:
+            # Log the error for debugging
+            raise ValidationError(f"An error occurred while withdrawing earnings: {str(e)}")
+
+    
+    # def withdraw_earnings(self, amount):
+    #     """Withdraw earnings, ensuring there are sufficient funds."""
+    #     if amount <= self.remaining_earnings:
+    #         self.remaining_earnings -= amount
+    #         self.save()
+    #     else:
+    #         raise ValueError("Insufficient funds to withdraw")
+
+
+class PushAlertNotification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('booking_confirmation', 'Booking Confirmation'),
+        ('trip_update', 'Trip Update'),
+        ('general', 'General'),
+    ]
+    
+    title = models.CharField(max_length=100)
+    message = models.TextField()
+    notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPES, default='general')
+    status = models.CharField(max_length=20, default='unread')
+    
+    # Use GenericForeignKey for flexibility
+    recipient_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    recipient_id = models.PositiveIntegerField()
+    recipient = GenericForeignKey('recipient_type', 'recipient_id')
+    
+    trip = models.ForeignKey('organization.Trip', on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.title} - {self.notification_type}"
+
+    def mark_as_read(self):
+        """Mark the notification as read."""
+        self.status = 'read'
+        self.save()
+# passenger/models.py
+
+from django.db import models, transaction
+from django.core.exceptions import ValidationError
+from authentication.models import CustomUser,Profile
+# from organization.models import Trip
+from django.utils import timezone
+
+class Passenger(Profile):
+    emergency_contact_name = models.CharField(max_length=50, blank=True)
+    emergency_contact_number = models.CharField(max_length=15, blank=True)
+    preferred_language = models.CharField(max_length=20, choices=[('en', 'English'), ('ne', 'Nepali')], blank=True)
+    loyalty_points = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.user.username} - profile"
+
+    def add_loyalty_points(self, points):
+        self.loyalty_points += points
+        self.save()
+
+    def redeem_loyalty_points(self, points):
+        if points > self.loyalty_points:
+            raise ValidationError("Insufficient loyalty points.")
+        
+        try:
+            with transaction.atomic():
+                self.loyalty_points -= points
+                self.save()
+                # Log the redemption or trigger other related actions.
+        except Exception as e:
+            # Log the error for debugging
+            raise ValidationError(f"An error occurred while redeeming loyalty points: {str(e)}")
+        
+    
+    # def redeem_loyalty_points(self, points):
+    #     if points <= self.loyalty_points:
+    #         self.loyalty_points -= points
+    #         self.save()
+    #     else:
+    #         raise ValueError("Insufficient loyalty points to redeem")
+
+
+class Payment(models.Model):
+    PAYMENT_METHOD_CHOICES = [
+        ('credit_card', 'Credit Card'),
+        ('debit_card', 'Debit Card'),
+        ('mobile_wallet', 'Mobile Wallet'),
+        ('cash', 'Cash'),
+        ('bank_transfer', 'Bank Transfer'),
+    ]
+
+    passenger = models.ForeignKey(Passenger, on_delete=models.CASCADE, related_name='payments')
+    trip = models.ForeignKey('organization.Trip', on_delete=models.CASCADE, related_name='payments')
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_date = models.DateTimeField(auto_now_add=True)
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
+    transaction_id = models.CharField(max_length=100, unique=True, blank=True)
+    is_successful = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Payment by {self.passenger.user.username} for {self.trip.vehicle.registration_number}"
+
+    def save(self, *args, **kwargs):
+        if not self.transaction_id:
+            self.transaction_id = f"{self.passenger.user.username}_{self.trip.trip_id}_{timezone.now().strftime('%Y%m%d%H%M%S')}"
+        super().save(*args, **kwargs)
+
+# booking/models.py
+
+from django.db import models
+from django.utils import timezone
+from organization.models import Trip,TripPrice, Seat
+from passenger.models import Passenger
+from django.conf import settings
+import os
+from rest_framework.serializers import ValidationError
+
+
+class BookingManager(models.Manager):
+    def create_booking(self, passenger, trip_price, num_passengers):
+        trip = trip_price.trip
+
+        # Check seat availability
+        if trip.vehicle.available_seat < num_passengers:
+            return None, "Seats are not available for today. Please try booking for another day."
+
+        # Reduce available seats
+        trip.vehicle.available_seat -= num_passengers
+        trip.vehicle.save()
+
+        # Create booking
+        booking = self.create(
+            passenger=passenger,
+            tripprice=trip_price,
+            num_passengers=num_passengers,
+            price=num_passengers * trip_price.price
+        )
+        return booking, None
+
+
+class Booking(models.Model):
+    booking_id = models.CharField(max_length=200, unique=True, editable=False)
+    passenger = models.ForeignKey(Passenger, on_delete=models.CASCADE)
+    tripprice = models.ForeignKey(TripPrice, on_delete=models.CASCADE)
+    num_passengers = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    booking_datetime = models.DateTimeField(auto_now_add=True)
+    seats = models.ManyToManyField(Seat, related_name="bookings")
+    is_confirmed = models.BooleanField(default=False, db_index=True)  # Add this line
+    objects = BookingManager()
+
+    def clean(self):
+        # Ensure enough seats are available
+        if self.num_passengers > self.tripprice.trip.vehicle.available_seat:
+            raise ValidationError("Not enough available seats in the vehicle.")
+        
+        # Ensure the required number of seats are available and unoccupied
+        available_seats = Seat.objects.filter(
+            vehicle=self.tripprice.trip.vehicle, is_occupied=False
+        )[:self.num_passengers]
+        
+        if available_seats.count() < self.num_passengers:
+            raise ValidationError("Not enough available seats. Please choose another trip.")
+        
+        self.seats.set(available_seats)
+
+    def save(self, *args, **kwargs):
+        # Run the custom clean method
+        self.clean()
+
+        # Calculate total price
+        self.price = self.tripprice.price * self.num_passengers
+
+        # Reduce available seats
+        self.tripprice.trip.vehicle.available_seat -= self.num_passengers
+        self.tripprice.trip.vehicle.save()
+
+        # Generate unique booking ID
+        if not self.booking_id:
+            prefix = self.passenger.user.username
+            timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
+            self.booking_id = f"{prefix}_{timestamp}".upper()
+
+        super().save(*args, **kwargs)
+
+        # Mark seats as occupied
+        self.seats.update(is_occupied=True)
+
+        # Generate and save the ticket
+        self.generate_ticket()
+
+    def generate_ticket(self):
+        ticket_content = self.generate_ticket_content()
+        filename = f"{self.booking_id}.txt"
+        ticket_dir = os.path.join(settings.MEDIA_ROOT, 'tickets')
+        ticket_file_path = os.path.join(ticket_dir, filename)
+
+        # Create ticket directory if it doesn't exist
+        if not os.path.exists(ticket_dir):
+            os.makedirs(ticket_dir)
+
+        try:
+            # Write ticket content to file
+            with open(ticket_file_path, 'w') as ticket_file:
+                ticket_file.write(ticket_content)
+            # Save the ticket record
+            Ticket.objects.create(booking=self, ticket_file=ticket_file_path)
+        except Exception as e:
+            raise ValidationError(f"Error creating ticket file: {str(e)}")
+
+    def generate_ticket_content(self):
+        seats_list = ', '.join(seat.seat_number for seat in self.seats.all())
+        return f"""
+        -------------------------------------
+        Booking ID: {self.booking_id}
+        Booking DATE TIME: {self.booking_datetime.strftime("%Y-%m-%d %H:%M:%S")}
+        Passenger: {self.passenger.user.username}
+        Trip: {self.tripprice.trip.from_location} to {self.tripprice.trip.to_location}
+        No. of Passengers: {self.num_passengers}
+        Seats: {seats_list}
+        Price per Person: {self.tripprice.price}
+        Total Price: {self.price}
+        Trip Date: {self.tripprice.trip.start_datetime.strftime("%Y-%m-%d %H:%M:%S")}
+        Ticket Booked Time: {timezone.now().strftime("%Y-%m-%d %H:%M:%S")}
+        -------------------------------------
+        """
+
+    def __str__(self):
+        return f"Booking for {self.passenger.user.username} on {self.tripprice.trip.vehicle.registration_number} - {self.tripprice.trip.from_location} to {self.tripprice.trip.to_location}"
+
+
+class Ticket(models.Model):
+    ticket_id = models.CharField(max_length=200, unique=True, editable=False)
+    booking = models.OneToOneField(Booking, on_delete=models.CASCADE)
+    ticket_file = models.FileField(upload_to='tickets/', max_length=200)
+
+    def save(self, *args, **kwargs):
+        if not self.ticket_id:
+            prefix = f"{self.booking.passenger.user.username}_{self.booking.num_passengers}_{self.booking.tripprice.trip.trip_id}"
+            timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
+            self.ticket_id = f"{prefix}_{timestamp}".upper()
+        
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Ticket for {self.booking.tripprice.trip.vehicle.registration_number} - {self.booking.tripprice.trip.from_location} to {self.booking.tripprice.trip.to_location}"
+

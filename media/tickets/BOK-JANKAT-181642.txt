@@ -1,0 +1,14 @@
+
+        -------------------------------------
+        Booking ID: BOK-JANKAT-181642
+        Booking Date and Time: 2024-08-26 07:45:13
+        Passenger: Arun
+        Trip: Janakpur to kathmandu
+        No. of Passengers: 2
+        Seats: S003, S004
+        Price per Person: 1500.00
+        Total Price: 3000.00
+        Trip Date: 2024-08-24 14:14:28
+        Ticket Booked Time: 2024-08-26 07:45:13
+        -------------------------------------
+        

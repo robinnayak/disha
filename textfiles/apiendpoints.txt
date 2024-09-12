@@ -1,0 +1,261 @@
+
+ Authentication Endpoints
+
+# Register
+Endpoint: `http://localhost:8000/auth/register/`  
+Method: `POST`  
+Request Body:
+```json
+{
+  "username": "ray",
+  "email": "ray@email.com",
+  "password": "ray@123456",
+  "password2": "ray@123456",
+  "license_number": "XBZ123ASD0",
+  "is_organization": false,
+  "is_driver": true,
+  "is_passenger": false
+}
+```
+Description: Register a new user with provided credentials and roles (organization, driver, or passenger).
+
+# Login
+Endpoint: `http://localhost:8000/auth/login/`  
+Method: `POST`  
+Request Body:
+```json
+{
+  "username": "Arun",
+  "password": "Arun@123456"
+}
+```
+Description: Authenticate a user and receive an authentication token.
+
+# Logout
+Endpoint: `http://localhost:8000/auth/logout/`  
+Method: `POST`  
+Description: Log out the current user and invalidate the authentication token.
+
+ Vehicle Endpoints
+
+# Create Vehicle
+Endpoint: `http://localhost:8000/organization/vehicles/`  
+Method: `POST`  
+Request Body:
+```json
+{
+  "license_number": "XBZ123ASD0",
+  "registration_number": "KA-1234",
+  "vehicle_type": "jeep",
+  "company_made": "Ford",
+  "model": "Corolla",
+  "color": "silver",
+  "seating_capacity": 5,
+  "license_plate_number": "KX-01-1234",
+  "insurance_expiry_date": "2025-12-31",
+  "fitness_certificate_expiry_date": "2025-06-30",
+  "image": null,
+  "available_seat": 0
+}
+```
+Description: Create a new vehicle entry.
+
+# Update Vehicle
+Endpoint: `http://localhost:8000/organization/vehicles/VEH-GR-1262/`  
+Method: `PUT`  
+Request Body:
+```json
+{
+  "registration_number": "KA-1234",
+  "license_number": "XBZ123ASD0",
+  "vehicle_type": "jeep",
+  "company_made": "Toyota",
+  "model": "Corolla",
+  "color": "black",
+  "seating_capacity": 5,
+  "insurance_expiry_date": "2025-12-31",
+  "fitness_certificate_expiry_date": "2025-06-30",
+  "image": null,
+  "available_seat": 5
+}
+```
+Description: Update details of an existing vehicle.
+
+ Review Endpoints
+
+# Create Review
+Endpoint: `http://localhost:8000/api/reviews/create/`  
+Method: `POST`  
+Request Body:
+```json
+{
+  "rating": 4,
+  "comment": "The service was excellent.",
+  "reviewee_content_type": "driver",
+  "reviewee_object_id": 3
+}
+```
+Description: Create a review for a driver or other reviewable entity.
+
+# Get Review
+Endpoint: `http://localhost:8000/api/review/`  
+Method: `GET`  
+Description: Retrieve all reviews or filter based on criteria.
+
+ Trip Endpoints
+
+# Create Trip
+Endpoint: `http://localhost:8000/organization/trips/`  
+Method: `POST`  
+Request Body:
+```json
+{
+  "registration_number": "VEH-GR-1262",
+  "price": 1500,
+  "from_location": "Dharan",
+  "to_location": "kathmandu",
+  "is_reverese_trip": false,
+  "duration": null,
+  "distance": 22.1,
+  "start_datetime": "2024-08-27T19:59:28+05:45",
+  "end_datetime": "2024-08-27T19:59:30+05:45"
+}
+```
+Description: Create a new trip with vehicle and route details.
+
+# Update Trip
+Endpoint: `http://localhost:8000/organization/trips/JANKAT20240826124959/`  
+Method: `PUT`  
+Request Body:
+```json
+{
+  "registration_number": "VEH-GR-7469",
+  "price": 1500,
+  "from_location": "Janakpur",
+  "to_location": "kathmandu",
+  "is_reverese_trip": false,
+  "duration": null,
+  "distance": 30,
+  "start_datetime": "2024-08-24T19:59:28+05:45",
+  "end_datetime": "2024-08-24T19:59:30+05:45"
+}
+```
+Description: Update details of an existing trip.
+
+# Reset Trip
+Endpoint: `http://localhost:8000/organization/trip-reset/`  
+Method: `POST`  
+Request Body:
+```json
+{
+  "trip_id": "JANKAT20240824153147",
+  "start_datetime": "2024-08-26T08:00:00+05:45"
+}
+```
+Description: Reset a trip by updating its start time and adjusting related details.
+
+ Booking Endpoints
+
+# Create Booking
+Endpoint: `http://localhost:8000/booking/create/`  
+Method: `POST`  
+Request Body:
+```json
+{
+  "trip_id": "JANKAT20240824153147",
+  "seats": [
+    {
+      "seat_number": "S005"
+    },
+    {
+      "seat_number": "S004"
+    }
+  ],
+  "is_confirmed": true
+}
+```
+Description: Create a new booking with seat selection.
+
+# Filter Bookings
+Endpoint: `http://localhost:8000/booking/filter/`  
+Method: `GET`  
+Description: Filter bookings based on various criteria.
+
+# Booking Detail
+Endpoint: `http://localhost:8000/booking/detail/BOK-JANKAT-285445/`  
+Method: `GET`  
+Request Body:
+```json
+{
+  "is_paid": true,
+  "seats": [
+    {
+      "seat_number": "S003"
+    },
+    {
+      "seat_number": "S004"
+    }
+  ]
+}
+```
+Description: Get details of a specific booking.
+
+# Daily Earnings
+Endpoint: `http://localhost:8000/booking/daily-earnings/create/`  
+Method: `POST`  
+Request Body:
+```json
+{
+  "trip_id": "DHAKAT20240827111821"
+}
+```
+Description: Create an entry for daily earnings based on a trip.
+
+ Ticket Endpoints
+
+# Filter Tickets
+Endpoint: `http://localhost:8000/api/ticket/filter/`  
+Method: `GET`  
+Description: Filter tickets based on various criteria.
+
+# Ticket Detail
+Endpoint: `http://localhost:8000/api/ticket/detail/ARUN_2_JANKAT20240824153147_20240825141544/`  
+Method: `GET`  
+Description: Get details of a specific ticket.
+
+ Passenger Endpoints
+
+# Payment
+Endpoint: `http://localhost:8000/passenger/payment/`  
+Method: `POST`  
+Request Body:
+```json
+{
+  "booking_id": "BOK-JANKAT-491263",
+  "payment_method": "mobile_wallet"
+}
+```
+Description: Make a payment for a booking.
+
+# User Payment
+Endpoint: `http://localhost:8000/passenger/user-payment/`  
+Method: `GET`  
+Description: Retrieve information about user payments.
+
+ Profile Endpoints
+
+# Get Profile
+Endpoint: `http://localhost:8000/api/profile/`  
+Method: `GET`  
+Request Body:
+```json
+{
+  "phone_number": "9825827690",
+  "profile_image": null,
+  "address": "Bhaktapur, Nepal",
+  "emergency_contact_name": "Sita",
+  "emergency_contact_number": 9825467890
+}
+```
+Description: Retrieve or update the user's profile information.
+

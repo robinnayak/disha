@@ -1,0 +1,68 @@
+from django.db import models
+
+class MyModel(models.Model):
+    name = models.CharField(max_length=100)
+
+    def clean(self):
+        if 'invalid' in self.name:
+            raise ValueError("Invalid name in model")
+
+
+from rest_framework import serializers
+from .models import MyModel
+
+class MyModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyModel
+        fields = ['name']
+
+    def validate(self, data):
+        instance = MyModel(**data)
+        try:
+            instance.clean()
+        except ValueError as e:
+            raise serializers.ValidationError({"name": str(e)})
+        return data
+
+
+import React, { useState } from 'react';
+import axios from 'axios';
+
+const MyComponent = () => {
+    const [name, setName] = useState('');
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await axios.post('http://your-api-endpoint', { name });
+            console.log('Success:', response.data);
+            setError(''); // Clear any previous errors
+        } catch (err) {
+            if (err.response && err.response.status === 400) {
+                // Handle serializers.ValidationError
+                setError(err.response.data.name || 'Validation error');
+            } else {
+                // Handle other errors
+                setError('An unexpected error occurred');
+            }
+        }
+    };
+
+    return (
+        <div>
+            <form onSubmit={handleSubmit}>
+                <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter name"
+                />
+                <button type="submit">Submit</button>
+            </form>
+            {error && <p style={{ color: 'red' }}>{error}</p>}
+        </div>
+    );
+};
+
+export default MyComponent;

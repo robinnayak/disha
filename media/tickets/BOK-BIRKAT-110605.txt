@@ -1,0 +1,18 @@
+
+        -------------------------------------
+        Organization: Greentech
+        Booking ID: BOK-BIRKAT-110605
+        Booking Date and Time: 2024-09-10 16:59:56
+        Passenger: Arun
+        Trip: biratnagar to kathmandu
+        No. of Passengers: 2
+        Seats: S002, S004
+        Price per Person: 1250.00
+        Total Price: 2500.00
+        Trip Date: 2024-09-12 02:45:00
+        Ticket Booked Time: 2024-09-10 16:59:58
+        Driver: raya
+        Vehicle: Ford Saneta red, Plate: KA-1298-B
+        Status: Confirmed, Paid
+        -------------------------------------
+        

@@ -1,0 +1,18 @@
+
+        -------------------------------------
+        Organization: Happytech
+        Booking ID: BOK-DHAKAT-411443
+        Booking Date and Time: 2024-09-09 06:38:02
+        Passenger: Arun
+        Trip: Dharan to kathmandu
+        No. of Passengers: 1
+        Seats: S001
+        Price per Person: 1500.00
+        Total Price: 1500.00
+        Trip Date: 2024-08-24 02:15:00
+        Ticket Booked Time: 2024-09-09 06:38:02
+        Driver: ray
+        Vehicle: Toyota Corall white, Plate: KZ-01-1234
+        Status: Confirmed, Not Paid
+        -------------------------------------
+        

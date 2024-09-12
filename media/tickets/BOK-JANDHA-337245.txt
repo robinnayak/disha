@@ -1,0 +1,18 @@
+
+        -------------------------------------
+        Organization: Greentech
+        Booking ID: BOK-JANDHA-337245
+        Booking Date and Time: 2024-09-09 06:19:30
+        Passenger: Arun
+        Trip: Janakpur to Dharan
+        No. of Passengers: 1
+        Seats: S002
+        Price per Person: 1200.00
+        Total Price: 1200.00
+        Trip Date: 2024-09-10 00:15:00
+        Ticket Booked Time: 2024-09-09 06:19:32
+        Driver: john
+        Vehicle: Toyta Corolla red, Plate: KY-01-1234
+        Status: Confirmed, Paid
+        -------------------------------------
+        

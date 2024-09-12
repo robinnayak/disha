@@ -1,0 +1,67 @@
+For the filtering functionality to work effectively, you will need to send the appropriate JSON data from the frontend to the backend via query parameters in the URL. Below are examples of how the JSON data might look for each user input, represented as URL query parameters:
+
+### 1. **Filtering by Date:**
+
+If the user selects a specific date, the JSON data could be:
+
+```json
+{
+  "date": "2024-09-05"
+}
+```
+
+### 2. **Filtering by Trip Origin and Destination:**
+
+If the user inputs an origin and destination, the JSON data might be:
+
+```json
+{
+  "origin": "CityA",
+  "destination": "CityB"
+}
+```
+
+### 3. **Filtering by Available Seats:**
+
+If the user specifies a minimum number of available seats:
+
+```json
+{
+  "available_seats": 3
+}
+```
+
+### 4. **Filtering by Organization:**
+
+If the user inputs the organization name:
+
+```json
+{
+  "organization": "OrgName"
+}
+```
+
+### 5. **Filtering by Driver:**
+
+If the user inputs the driver's name:
+
+```json
+{
+  "driver": "DriverName"
+}
+```
+
+### Combined Filters:
+
+If the user wants to filter by multiple criteria at once, the combined JSON might look like:
+
+```json
+{
+  "date": "2024-09-05",
+  "origin": "CityA",
+  "destination": "CityB",
+  "available_seats": 3,
+  "organization": "OrgName",
+  "driver": "DriverName"
+}
+```

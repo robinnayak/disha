@@ -1,0 +1,18 @@
+
+        -------------------------------------
+        Organization: Greentech
+        Booking ID: BOK-DHAJAN-139516
+        Booking Date and Time: 2024-09-09 10:00:31
+        Passenger: Arun
+        Trip: Dharan to Janakpur
+        No. of Passengers: 1
+        Seats: S005
+        Price per Person: 1300.00
+        Total Price: 1300.00
+        Trip Date: 2024-09-10 03:15:00
+        Ticket Booked Time: 2024-09-09 10:38:38
+        Driver: roy
+        Vehicle: Toyta Corolla silver, Plate: KY-02-1235
+        Status: Confirmed, Paid
+        -------------------------------------
+        

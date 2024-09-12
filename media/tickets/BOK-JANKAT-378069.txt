@@ -1,0 +1,18 @@
+
+        -------------------------------------
+        Organization: Greentech
+        Booking ID: BOK-JANKAT-378069
+        Booking Date and Time: 2024-08-27 11:05:09
+        Passenger: Arun
+        Trip: Janakpur to kathmandu
+        No. of Passengers: 1
+        Seats: S005
+        Price per Person: 1500.00
+        Total Price: 1500.00
+        Trip Date: 2024-08-26 02:15:00
+        Ticket Booked Time: 2024-08-27 11:08:16
+        Driver: raya
+        Vehicle: Toyota Corolla silver, Plate: KD-01-1234
+        Status: Confirmed, Paid
+        -------------------------------------
+        
