@@ -30,16 +30,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-(-qye!0!cxr58=24)-v3y2$eenr%ple-7t8(nhj!%o18i)q&i3'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
+# DEBUG = False
+DEBUG = config('DEBUG', default=False, cast=bool)
 # ALLOWED_HOSTS = ['localhost', '10.0.2.2', '127.0.0.1','*.up.railway.app']
+
+# Allowed hosts for deployment
 ALLOWED_HOSTS = ['*']
-#updated for railway 
-# CSRF_TRUSED_ORIGIN = ['https://disha.up.railway.app/']
+
+# CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = ["https://disha.up.railway.app/"]
 
 # Application definition
 
+# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -47,25 +50,27 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
+    # Custom apps
     'api',
     'authentication',
     'organization',
     'booking',
     'passenger',
     'driver',
-    
+
+    # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
-    
     'corsheaders',
 ]
 
+# Middleware configurations
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', #white noise
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # WhiteNoise for serving static files
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # Handles CORS headers
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -93,13 +98,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'disha.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
 DATABASES = {
     'default': db_url(config('DATABASE_URL'))
 }
+
+# Uncomment this block for development using SQLite
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.sqlite3',
@@ -108,22 +111,12 @@ DATABASES = {
 # }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
+# Password validation settings
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 REST_FRAMEWORK = {
@@ -134,38 +127,35 @@ REST_FRAMEWORK = {
 }
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.1/topics/i18n/
-
+# Language and timezone settings
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kathmandu'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
 
+# Static files (CSS, JavaScript, Images) configuration
 STATIC_URL = '/static/'
-
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Directory for static files
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')  # Directory for static files in production
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Directory for media uploads
 
+# WhiteNoise configuration for serving static files efficiently in production
 STATICSTORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
+# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Custom user model
 AUTH_USER_MODEL = 'authentication.CustomUser'
 
+# Ensure MEDIA_URL and MEDIA_ROOT are set properly
 if not MEDIA_URL or not MEDIA_ROOT:
     raise ValueError("MEDIA_URL and MEDIA_ROOT must be set in the environment variables.")
 
-
-# JWT settings
+# JWT settings for authentication
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
@@ -179,18 +169,11 @@ SIMPLE_JWT = {
     "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
     "JTI_CLAIM": "jti",
 }
-
-# Email Configuration
+# Email Configuration using environment variables
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')  # Be careful with storing sensitive data in your settings
-DEFAULT_FROM_EMAIL = f'Disha <{EMAIL_HOST_USER}>'
-
-
-
-#for smtp
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')  # Environment variable for email host user
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')  # Environment variable for email password
+DEFAULT_FROM_EMAIL = f'Disha <{EMAIL_HOST_USER}>'  # Default sender email address
