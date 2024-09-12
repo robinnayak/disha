@@ -1,0 +1,16 @@
+{
+    "builds": [
+      {
+        "src": "./",
+        "use": "@railway/buildpacks"
+      }
+    ],
+    "deployments": [
+      {
+        "src": "./",
+        "use": "@railway/buildpacks",
+        "cmd": "gunicorn disha.wsgi"
+      }
+    ]
+  }
+  
