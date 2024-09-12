@@ -135,15 +135,21 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images) configuration
+# STATIC_URL = '/static/'
+# STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Directory for static files
+# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')  # Directory for static files in production
+
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Directory for static files
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')  # Directory for static files in production
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+STATICSTORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Directory for media uploads
 
 # WhiteNoise configuration for serving static files efficiently in production
-STATICSTORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
