@@ -1,2 +1,1 @@
-web gunicorn disha.wsgi
-
+web: gunicorn disha.wsgi:application
