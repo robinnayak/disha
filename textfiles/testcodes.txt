@@ -15,6 +15,7 @@ from datetime import timedelta
 import os
 from decouple import config
 from dj_database_url import parse as db_url
+import cloudinary_storage
 
 # print("data base url",config('DATABASE_URL'))
 
@@ -49,8 +50,9 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
-
+    'cloudinary_storage',
+    'django.contrib.staticfiles',    
+    'cloudinary',
     # Custom apps
     'api',
     'authentication',
@@ -63,6 +65,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+
 ]
 
 # Middleware configurations
@@ -135,15 +138,20 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images) configuration
+# STATIC_URL = '/static/'
+# STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Directory for static files
+# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')  # Directory for static files in production
+
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Directory for static files
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')  # Directory for static files in production
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Directory for media uploads
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# WhiteNoise configuration for serving static files efficiently in production
 STATICSTORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Cloudinary configuration for serving static files efficiently in production
+
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -177,3 +185,11 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')  # Environment variable for email host user
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')  # Environment variable for email password
 DEFAULT_FROM_EMAIL = f'Disha <{EMAIL_HOST_USER}>'  # Default sender email address
+
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dckab8f6g',
+    'API_KEY': '357275947285885',
+    'API_SECRET': '2EbWg8do5yV9wgi94LrAt8kLfGk'
+}
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'

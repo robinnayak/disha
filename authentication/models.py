@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.db.models import Sum
 from django.apps import apps
 from django.contrib.auth.hashers import make_password
+from cloudinary.models import CloudinaryField
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, email, password=None, **extra_fields):
@@ -77,7 +78,8 @@ class TemporaryUser(models.Model):
 class Profile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
     phone_number = models.CharField(max_length=15, blank=True)
-    profile_image = models.ImageField(upload_to='profile_images', blank=True, null=True)
+    # profile_image = models.ImageField(upload_to='profile_images', blank=True, null=True)
+    profile_image =  CloudinaryField('profile_images', blank=True, null=True)
     address = models.CharField(max_length=255, blank=True)
     date_of_birth = models.DateField(blank=True, null=True)
 
@@ -147,7 +149,8 @@ class Organization(Profile):
 class Driver(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='driver_profile')
     phone_number = models.CharField(max_length=15, blank=True)
-    profile_image = models.ImageField(upload_to='profile_images', blank=True, null=True)
+    # profile_image = models.ImageField(upload_to='profile_images', blank=True, null=True)
+    profile_image =  CloudinaryField('profile_images', blank=True, null=True)
     address = models.CharField(max_length=255, blank=True)
     date_of_birth = models.DateField(blank=True, null=True)
     organization = models.ForeignKey('Organization', on_delete=models.CASCADE, blank=True, null=True, related_name='drivers')
