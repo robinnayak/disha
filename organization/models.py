@@ -103,6 +103,7 @@ class Seat(models.Model):
             return True
         return False
 
+
 trip_choices = [
     ('kathmandu', 'Kathmandu'),
     ('pokhara', 'Pokhara'),
@@ -124,6 +125,8 @@ trip_choices = [
     ('namche_bazaar', 'Namche Bazaar'),
     ('manang', 'Manang'),
     ('lukla', 'Lukla'),
+    ('jaleswor', 'Jaleswor'),
+    ('mathayani', 'Mathayani'),
 ]
 
 # Trip Model
