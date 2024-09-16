@@ -6,6 +6,7 @@ from rest_framework import serializers
 from django.utils import timezone
 from django.db.models import Sum
 from datetime import timedelta
+from cloudinary.models import CloudinaryField
 # Review Model
 class Review(models.Model):
     RATING_CHOICES = [
@@ -53,7 +54,9 @@ class Vehicle(models.Model):
     license_plate_number = models.CharField(max_length=10, unique=True)
     insurance_expiry_date = models.DateField()
     fitness_certificate_expiry_date = models.DateField()
-    image = models.ImageField(upload_to='vehicle_images', blank=True, null=True)
+    # image = models.ImageField(upload_to='vehicle_images', blank=True, null=True)
+    image = CloudinaryField('vehicle_images', blank=True, null=True)
+    
     available_seat = models.PositiveIntegerField(default=0)
 
     def reset_all_seats(self):
