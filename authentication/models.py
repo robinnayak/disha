@@ -72,9 +72,6 @@ class TemporaryUser(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     last_login = models.DateTimeField(auto_now=True)
     
-    
-        
-
 class Profile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
     phone_number = models.CharField(max_length=15, blank=True)

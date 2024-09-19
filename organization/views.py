@@ -167,7 +167,9 @@ class VehicleDetailView(APIView):
                 
             # Delete the vehicle instance
             vehicle.delete()
-            return Response({"message": "Vehicle deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            print("=============================")
+            print("vehicle deleted",vehicle)
+            return Response({"message": "Vehicle deleted successfully"}, status=status.HTTP_200_OK)
         except Vehicle.DoesNotExist:
             return Response({"error": "Vehicle not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
@@ -273,7 +275,7 @@ class TripDetailView(APIView):
         """Delete an existing trip by trip ID."""
         trip = get_object_or_404(Trip, trip_id=trip_id, organization__user=request.user)
         trip.delete()
-        return Response({"message": "Trip deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_200_OK)
 
 
 class TripResetView(APIView):

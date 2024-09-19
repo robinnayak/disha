@@ -174,9 +174,10 @@ class LoginView(APIView):
                 }, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+# View for Forget Password
 class ForgetPasswordView(APIView):
     renderer_classes = [UserRenderer]
+
     @transaction.atomic
     def post(self, request):
         serializer = ForgetPasswordSerializer(data=request.data)
@@ -186,19 +187,21 @@ class ForgetPasswordView(APIView):
                 'message': 'Password reset link sent. Please check your email.',
                 'reset_url': reset_url
             }
-            print("message",message)
             return Response(data=message, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+# View for Reset Password
 class ResetPasswordView(APIView):
+
     @transaction.atomic
     def post(self, request, uidb64, token):
-        # Attach uidb64 and token to the request data
-        data = request.data.copy()
-        data['uidb64'] = uidb64
-        data['token'] = token
-        
-        serializer = ResetPasswordSerializer(data=data)
+        data = request.data
+        context = {
+            'uidb64': uidb64,
+            'token': token
+        }
+        serializer = ResetPasswordSerializer(data=data, context=context)
         if serializer.is_valid():
             serializer.save()
             return Response({'message': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
@@ -268,4 +271,5 @@ class ProfileAPIView(APIView):
             # Delete the profile first
             # Delete the associated CustomUser instance
             user.delete()
-        return Response({"message": f"Profile of {user.username} deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+            print("succesfuly deleted",user.username)
+        return Response({"message": f"Profile of {user.username} deleted successfully."}, status=status.HTTP_200_OK)

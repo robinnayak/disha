@@ -96,11 +96,12 @@ class CustomUserLoginSerializer(serializers.Serializer):
         
         return data
 
+# Serializer for Forget Password
 class ForgetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    
+
     def validate(self, data):
-        # Check if the user with this email exists
+        # Check if a user with the given email exists
         if not CustomUser.objects.filter(email=data['email']).exists():
             raise serializers.ValidationError("User with this email does not exist.")
         return data
@@ -110,7 +111,7 @@ class ForgetPasswordSerializer(serializers.Serializer):
         token = PasswordResetTokenGenerator().make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
 
-        # Build the password reset URL with the correct URL pattern name and kwargs
+        # Build the password reset URL using Django's reverse function
         reset_url = request.build_absolute_uri(
             reverse('reset-password', kwargs={'uidb64': uid, 'token': token})
         )
@@ -120,30 +121,45 @@ class ForgetPasswordSerializer(serializers.Serializer):
         message = f'Hi {user.username},\n\nPlease click the link below to reset your password:\n{reset_url}\n\nThank you!'
         send_mail(subject, message, 'no-reply@example.com', [user.email])
         return reset_url
-    
+
+
+# Serializer for Reset Password
 class ResetPasswordSerializer(serializers.Serializer):
-    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
-    password2 = serializers.CharField(write_only=True, style={'input_type': 'password'})
-    uidb64 = serializers.CharField(write_only=True)
-    token = serializers.CharField(write_only=True)
-    
+    # Password validation
+    password = serializers.RegexField(
+        regex=r'^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$',
+        write_only=True,
+        error_messages={'invalid': 'Password must be at least 8 characters long, with at least one capital letter, one number, and one special symbol'}
+    )
+    password2 = serializers.CharField(write_only=True, style={'input_type': 'password'}, required=True)
+
     def validate(self, data):
+        # Ensure the two passwords match
         if data['password'] != data['password2']:
             raise serializers.ValidationError("Passwords must match.")
         return data
-    
+
     def save(self):
-        uid = urlsafe_base64_decode(self.validated_data['uidb64']).decode()
-        print("uid",uid)
-        user = CustomUser.objects.get(pk=uid)
-        print("user",user)
-        if not PasswordResetTokenGenerator().check_token(user, self.validated_data['token']):
-            raise ValidationError("Token is invalid or expired")
-        
-        print("user password before",user.password)
+        uidb64 = self.context.get('uidb64')
+        token = self.context.get('token')
+
+        try:
+            # Decode the user ID and retrieve the user
+            uid = urlsafe_base64_decode(uidb64).decode()
+            print("decoded uid",uid)
+            user = CustomUser.objects.get(pk=uid)
+            print("user",user)
+        except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+            raise serializers.ValidationError("Invalid UID or user does not exist.")
+
+        # Check if the token is valid
+        if not PasswordResetTokenGenerator().check_token(user, token):
+            raise serializers.ValidationError("Token is invalid or expired.")
+
+        # Set the new password
         user.set_password(self.validated_data['password'])
-        print("user password after",user.password)
         user.save()
+
         return user
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -249,7 +265,6 @@ class OrganizationSerializer(serializers.ModelSerializer):
         instance.save()
         
         return instance
-
 
 # Driver Serializer
 class DriverSerializer(serializers.ModelSerializer):
