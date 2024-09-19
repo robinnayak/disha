@@ -9,8 +9,6 @@ urlpatterns = [
       
     path('daily-earnings/create/', views.DailyEarningsCreateView.as_view(), name='daily-earnings-create'),
     path('daily-earnings/filter/', views.DailyEarningsFilterView.as_view(), name='daily-earnings-filter'),
-    
-    
-
+    path('reset-trip/',views.ResetTripView.as_view(),name='reset-trip')    
 ]
 
