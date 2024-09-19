@@ -10,7 +10,7 @@ from .models import Booking, Ticket, DailyEarnings
 from organization.models import TripPrice, Trip
 from authentication.models import Passenger,Organization,Driver
 from authentication.renderers import UserRenderer
-
+from datetime import timedelta
 
 class BookingCreateView(APIView):
     """
@@ -397,3 +397,46 @@ class DailyEarningsDetailView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
    
+class ResetTripView(APIView):
+    
+    renderer_classes = [UserRenderer]
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        trip_id = request.data.get('trip_id')
+        user = request.user  # Currently logged-in user
+        
+        # Step 1: Attempt to find the trip based on trip_id
+        try:
+            trip = Trip.objects.get(trip_id=trip_id)
+        except Trip.DoesNotExist:
+            return Response({"error": "Trip not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Step 2: Check if the trip is completed before resetting
+        if trip.is_completed:
+            # Step 3: Perform reset actions
+            try:
+                with transaction.atomic():  # Ensure all changes are atomic
+                    trip.vehicle.reset_all_seats()  # Reset seats in the vehicle
+                    trip.start_datetime += timedelta(days=1)  # Move the trip date by 1 day
+                    trip.is_completed = False  # Mark trip as not completed
+                    trip.total_earnings = 0.0  # Reset earnings
+                    trip.passenger_count = 0  # Reset passenger count
+                    trip.last_updated_by = user.username  # Log who performed the reset
+
+                    trip.save()  # Save all changes to the trip
+                    
+                # Step 4: Return success response
+                return Response({"message": "Trip reset successfully."}, status=status.HTTP_200_OK)
+            
+            except trip.vehicle.DoesNotExist:
+                return Response({"error": "Vehicle not found for the trip."}, status=status.HTTP_404_NOT_FOUND)
+            
+            except Exception as e:
+                # Log any unexpected errors and return a generic failure message
+                print(f"Error during trip reset: {e}")
+                return Response({"error": "Failed to reset the trip. Please try again."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        else:
+            # Step 5: Trip is not completed, so no reset action is taken
+            return Response({"error": "Trip is not completed yet."}, status=status.HTTP_400_BAD_REQUEST)
