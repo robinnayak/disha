@@ -4,7 +4,7 @@ from authentication.models import Passenger,CustomUser
 from authentication.serializers import PassengerSerializer
 from booking.models import Booking
 from booking.serializers import BookingSerializer
-
+from organization.serializers import SeatSerializer
 class PaymentSerializer(serializers.ModelSerializer):
     passenger = PassengerSerializer(read_only=True)
     booking = BookingSerializer(read_only=True)
@@ -88,5 +88,39 @@ class PaymentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This payment has already been completed and cannot be deleted.")
         
         instance.delete()
+    
+    
+class OngoingTripSerializer(serializers.ModelSerializer):
+    """Serializer for ongoing trips details of a passenger."""
+    
+        # Read-only fields from related models
+    passenger_username = serializers.ReadOnlyField(source='passenger.user.username')
+    trip_from_location = serializers.ReadOnlyField(source='trip.from_location')
+    trip_to_location = serializers.ReadOnlyField(source='trip.to_location')
+    is_completed = serializers.ReadOnlyField(source='trip.is_completed')
+    price_per_person = serializers.DecimalField(source='trip.price.price', max_digits=10, decimal_places=2, read_only=True)
+    # Display start datetime from trip
+    start_datetime = serializers.DateTimeField(source='trip.start_datetime', read_only=True)
+
+    # Related serializer for seats
+    seats = SeatSerializer(many=True)
+    
+    class Meta:
+        model = Booking
+        fields = [
+            'booking_id', 
+            'passenger_username', 
+            'trip_from_location', 
+            'trip_to_location', 
+            'trip_datetime',
+            'num_passengers', 
+            'seats',
+            'price', 
+            'is_confirmed', 
+            'is_paid',
+            'price_per_person',
+            'is_completed',
+            'start_datetime'
+        ]
     
     
