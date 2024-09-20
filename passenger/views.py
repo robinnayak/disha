@@ -125,3 +125,4 @@ class BookingListView(APIView):
         serializer = BookingSerializer(bookings,many=True)
         return Response(serializer.data,status=status.HTTP_200_OK)
     
+

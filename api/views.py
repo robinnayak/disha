@@ -8,10 +8,14 @@ from authentication.renderers import UserRenderer
 from organization.models import Review
 from organization.serializers import ReviewSerializer,TripSerializer,TripPriceSerializer
 from django.contrib.contenttypes.models import ContentType
-from authentication.models import Passenger,Driver,Organization
+from authentication.models import Passenger,Driver,Organization,CustomUser
 from organization.models import Trip,Vehicle
 from django.db.models import Q
 from datetime import datetime
+from .models import SupportRequest,Feedback
+from .serializers import SupportRequestSerializer,FeedbackSerializer
+from django.core.mail import send_mail
+from django.conf import settings
 # Create your views here.
 
 class PassengerHomeView(APIView):
@@ -105,104 +109,6 @@ class PassengerHomeView(APIView):
         except Exception as e:
             # Return an error response if any exception occurs
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
-
-# class PassengerHomeView(APIView):
-#     permission_classes = [IsAuthenticated]
-#     renderer_classes = [UserRenderer]
-
-#     def get_filtered_trips(self, filters):
-#         """
-#         This method applies filters to the Trip queryset based on provided parameters.
-#         """
-#         # Base query for trips
-#         trips_query = Trip.objects.all()
-
-#         # Apply filters if parameters are provided
-#         if filters.get('date'):
-#             filter_date = datetime.strptime(filters['date'], '%Y-%m-%d').date()
-#             trips_query = trips_query.filter(start_datetime__date=filter_date)
-
-#         if filters.get('origin'):
-#             trips_query = trips_query.filter(from_location__icontains=filters['origin'])
-
-#         if filters.get('destination'):
-#             trips_query = trips_query.filter(to_location__icontains=filters['destination'])
-
-#         if filters.get('available_seats'):
-#             trips_query = trips_query.filter(vehicle__available_seat__gte=int(filters['available_seats']))
-
-#         if filters.get('organization'):
-#             trips_query = trips_query.filter(organization__user__username__icontains=filters['organization'])
-
-#         if filters.get('driver'):
-#             trips_query = trips_query.filter(vehicle__driver__user__username__icontains=filters['driver'])
-
-#         return trips_query
-
-#     def get_vehicle_trip_data(self, trips_query):
-#         """
-#         This method fetches vehicle data and related trips based on the filtered trips query.
-#         """
-#         # Base query for fetching vehicles and related trips
-#         vehicles = Vehicle.objects.select_related('vehicle')
-
-#         vehicle_trip_data = []
-
-#         for vehicle in vehicles:
-#             # Fetch the related trip for the vehicle if it exists and matches filters
-#             trip = getattr(vehicle, 'vehicle', None)  # 'vehicle' is the related name for Trip model
-
-#             if trip and trip in trips_query:
-#                 # Serialize the trip data
-#                 trip_serializer = TripSerializer(trip)
-                
-#                 # Append the serialized data to the list
-#                 vehicle_trip_data.append(trip_serializer.data)
-
-#         return vehicle_trip_data
-
-#     def get(self, request, *args, **kwargs):
-#         """
-#         GET method for fetching home data without filters.
-#         """
-#         try:
-#             # Fetch all trips without filters
-#             trips_query = Trip.objects.all()
-#             vehicle_trip_data = self.get_vehicle_trip_data(trips_query)
-
-#             # Return the list as a response
-#             return Response({"vehicle_trip_data": vehicle_trip_data}, status=status.HTTP_200_OK)
-
-#         except Exception as e:
-#             # Return an error response if any exception occurs
-#             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-#     def post(self, request, *args, **kwargs):
-#         """
-#         POST method for searching trips based on filters.
-#         """
-#         try:
-#             # Retrieve filter parameters from the request data
-#             filters = request.data
-
-#             # Get filtered trips using the helper method
-#             trips_query = self.get_filtered_trips(filters)
-
-#             # Fetch and serialize vehicle and trip data
-#             vehicle_trip_data = self.get_vehicle_trip_data(trips_query)
-
-#             # Return the filtered list as a response
-#             return Response({"vehicle_trip_data": vehicle_trip_data}, status=status.HTTP_200_OK)
-
-#         except Exception as e:
-#             # Return an error response if any exception occurs
-#             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
        
 class ReviewCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -294,3 +200,63 @@ class ReviewListAPIView(APIView):
 
         serializer = ReviewSerializer(reviews, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class SupportRequestAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    
+    def get(self,request):
+        user = request.user
+        if user.is_superuser:
+            support_requests = SupportRequest.objects.all()
+        else:
+            support_requests = SupportRequest.objects.filter(user=user)
+        
+        serializer = SupportRequestSerializer(support_requests, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        user = request.user
+
+        # Pass user in the context for the serializer
+        serializer = SupportRequestSerializer(data=request.data, context={'user': user})
+        
+        if serializer.is_valid():
+            # Save the SupportRequest instance
+            support_request = serializer.save()
+
+            # Send an email to the app owner
+            subject = f"New Support Request: {support_request.subject}"
+            message = f"""
+                Support Request from: {request.user.email}
+                Subject: {support_request.subject}
+
+                Message:
+                {support_request.message}
+            """
+            app_owner_email = "robinnayak86@gmail.com"
+            print("user email to send message",user.email)
+            send_mail(subject, message, user.email, [app_owner_email])
+
+            # Return a success response
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class FeedbackView(APIView):
+    permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    def get(self, request):
+        # Return only feedback from the authenticated user
+        feedback = Feedback.objects.filter(user=request.user)
+        serializer = FeedbackSerializer(feedback, many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+
+    def post(self, request):
+        # Create new feedback
+        serializer = FeedbackSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save(user=request.user)  # Associate feedback with the authenticated user
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

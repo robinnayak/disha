@@ -1,6 +1,6 @@
 from django.urls import path, include
 from authentication.views import ProfileAPIView
-from .views import ReviewCreateAPIView,ReviewListAPIView,PassengerHomeView
+from .views import ReviewCreateAPIView,ReviewListAPIView,PassengerHomeView, SupportRequestAPIView,FeedbackView
 from booking.views import TicketFilterView,TicketDetailView
 urlpatterns = [
     # path('profile/',ProfileAPIView.as_view(),name="profile"),
@@ -14,5 +14,7 @@ urlpatterns = [
     path('booking/',include('booking.urls')),
     path('passenger/',include('passenger.urls')),
     path('driver/',include('driver.urls')),
+    path('support-request/',SupportRequestAPIView.as_view(),name='support-request'),
+    path('feedback/',FeedbackView.as_view(),name='feedback')
 ]
 
