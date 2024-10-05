@@ -8,7 +8,7 @@ from django.db.models import Sum
 from django.apps import apps
 from django.contrib.auth.hashers import make_password
 from cloudinary.models import CloudinaryField
-
+from decimal import Decimal
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, email, password=None, **extra_fields):
         if not username:
@@ -177,8 +177,9 @@ class Driver(models.Model):
         total_earnings = earnings.aggregate(total_earnings=Sum('total_earnings'))['total_earnings'] or 0.0
         no_of_trips = earnings.count()
         
+        driver_earnings = total_earnings * Decimal(0.1) # 10 percentage of total earnings
         # Update the driver's fields
-        self.total_earnings = total_earnings
+        self.total_earnings = driver_earnings
         self.no_of_trips = no_of_trips
         self.save()
         return self.total_earnings, self.no_of_trips

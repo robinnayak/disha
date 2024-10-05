@@ -11,6 +11,9 @@ class BookingSerializer(serializers.ModelSerializer):
     """Serializer for handling Booking data, including validation and creation logic."""
     
     # Read-only fields from related models
+    passenger_id = serializers.ReadOnlyField(source='passenger.id')
+    organization_id = serializers.ReadOnlyField(source='trip.organization.id')
+    driver_id = serializers.ReadOnlyField(source='trip.vehicle.driver.id')
     passenger_username = serializers.ReadOnlyField(source='passenger.user.username')
     trip_from_location = serializers.ReadOnlyField(source='trip.from_location')
     trip_to_location = serializers.ReadOnlyField(source='trip.to_location')

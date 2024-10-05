@@ -7,10 +7,10 @@ from django.db import transaction
 from booking.models import Booking
 from booking.serializers import BookingSerializer
 from .models import Payment
-from .serializers import PaymentSerializer
+from .serializers import PaymentSerializer,OngoingTripSerializer
 from authentication.models import Passenger
 from authentication.renderers import UserRenderer
-
+from django.utils import timezone
 # class PassengerHomePageView(APIView):
 #     permission_classes = [IsAuthenticated]
 
@@ -126,3 +126,26 @@ class BookingListView(APIView):
         return Response(serializer.data,status=status.HTTP_200_OK)
     
 
+class OngoingTripView(APIView):
+    permission_classes = [IsAuthenticated]
+    renderer_classes = [UserRenderer]
+    
+    def get(self,request):
+        user = request.user
+        
+        if user.is_passenger:
+            passenger = Passenger.objects.get(user=user)
+            print("passenger",passenger)
+            ongoing_trips = Booking.objects.filter(
+                passenger=passenger,
+                trip__is_completed = False,
+                trip_datetime__gte=timezone.now()
+            ).order_by('trip_datetime')
+            print(ongoing_trips)
+
+            serializer = OngoingTripSerializer(ongoing_trips,many=True)
+            
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        
+        else:
+            return Response({"detail": "Invalid user role."}, status=status.HTTP_400_BAD_REQUEST)
