@@ -119,11 +119,9 @@ class VehicleSerializer(serializers.ModelSerializer):
         org_initials = username[:2].upper()
         return f"VEH-{org_initials}-{id}"
 
-
 class ReviewSerializer(serializers.ModelSerializer):
     reviewer = serializers.SerializerMethodField(read_only=True)
     reviewee = serializers.SerializerMethodField(read_only=True)
-
     class Meta:
         model = Review
         fields = '__all__'

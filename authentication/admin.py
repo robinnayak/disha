@@ -4,11 +4,8 @@ from authentication.models import CustomUser, Profile,Location,Driver,Passenger,
 # Register your models here.
 
 # admin.site.register(CustomUser)
-admin.site.register(Organization)
-admin.site.register(Profile)
-admin.site.register(Driver)
+
 admin.site.register(Location)
-admin.site.register(Passenger)
 admin.site.register(TemporaryUser)
 
 class CustomUserAdmin(UserAdmin):
@@ -40,3 +37,31 @@ class CustomUserAdmin(UserAdmin):
 
 # Register the CustomUser model with the admin site
 admin.site.register(CustomUser, CustomUserAdmin)
+
+# Profile Admin
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'phone_number', 'address', 'date_of_birth')
+    search_fields = ('user__username', 'phone_number', 'address')
+
+# Organization Admin
+@admin.register(Organization)
+class OrganizationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'registration_number', 'total_earnings', 'no_of_trips', 'date_created')
+    search_fields = ('name', 'registration_number')
+    list_filter = ('date_created',)
+    ordering = ('-date_created',)
+
+# Driver Admin
+@admin.register(Driver)
+class DriverAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'organization', 'license_number', 'experience', 'availability_status', 'total_earnings', 'date_created', 'no_of_trips')
+    search_fields = ('user__username', 'license_number', 'organization__name')
+    list_filter = ('availability_status', 'date_created', 'organization')
+
+# Passenger Admin
+@admin.register(Passenger)
+class PassengerAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'phone_number', 'emergency_contact_name', 'emergency_contact_number', 'loyalty_points', 'preferred_language')
+    search_fields = ('user__username', 'phone_number', 'emergency_contact_name')
+    list_filter = ('preferred_language',)
