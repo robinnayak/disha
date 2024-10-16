@@ -1,0 +1,23 @@
+Here’s the revised version, including the new feature for handling reviews:
+
+---
+
+### Wallet and Payment Integration
+- **In-App Wallet Creation:** Develop an in-app wallet where users can manage payments. Passengers will be able to top up and withdraw funds using local payment methods such as **Khalti, CG Pay,** and **Prabhu Pay**.
+- **Transaction Partnerships:** Partner with these payment platforms for **transaction-only purposes**, without affecting the booking process directly.
+- **Payment Credit for Cancellations:** If a passenger cancels their booking, the payment will be **credited to their wallet**. This credit can be used for future bookings on other dates, making the refund process seamless and encouraging continued usage of the app.
+
+### Booking and Payment Rules
+- **Booking Cancellation Policy:** If a passenger books a seat but does not complete the payment within **one hour**, the system will automatically **cancel** the booking. The seat will then be made available for other passengers to book, ensuring efficient seat management.
+
+### Driver Motivation Features
+- **Achievement Showcase:** Highlight drivers’ achievements by displaying milestones, certifications, and rewards they have earned while using the app.
+- **Bonus Display:** Drivers’ bonuses will be prominently shown to motivate them and encourage engagement with the platform.
+- **Driving Experience Indicator:** Implement a dynamic field to display how many years a driver has been driving with the app, updating automatically as they continue to work with the platform.
+
+### Review and Rating Adjustment
+- **Review Adjustment for Multiple Passengers:** When a review is submitted by a single passenger but there are **14 passengers on a trip** (all in one vehicle), the **overall rating** will be **adjusted**. The rating will be divided appropriately to ensure that the review reflects the input of multiple passengers and prevents bias from a single review.
+
+---
+
+This updated reference now includes handling reviews and ratings more equitably when multiple passengers are involved in a single trip, ensuring fairness in the feedback system.
