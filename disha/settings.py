@@ -16,7 +16,6 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # DEBUG = False
 ALLOWED_HOSTS = ['*']
 
-print("settings",config('DEBUG'))
 # CSRF Trusted Origins for deployment
 CSRF_TRUSTED_ORIGINS = ["https://disha.up.railway.app"]
 
@@ -78,7 +77,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'disha.wsgi.application'
-
+# Uncomment this block for development using SQLite
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 # Database configuration using environment variable
 DATABASES = {
     'default': db_url(config('DATABASE_URL'))

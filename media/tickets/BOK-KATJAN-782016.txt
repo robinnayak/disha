@@ -1,0 +1,18 @@
+
+        -------------------------------------
+        Organization: zabmog
+        Booking ID: BOK-KATJAN-782016
+        Booking Date and Time: 2024-10-04 06:04:13
+        Passenger: suwvue
+        Trip: kathmandu to janakpur
+        No. of Passengers: 2
+        Seats: S002, S004
+        Price per Person: 1200.00
+        Total Price: 2400.00
+        Trip Date: 2024-10-05 02:15:00
+        Ticket Booked Time: 2024-10-04 06:04:15
+        Driver: kizmez
+        Vehicle: Toyta Caroll black, Plate: KK-02-1234
+        Status: Confirmed, Paid
+        -------------------------------------
+        
